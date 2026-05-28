@@ -52,7 +52,7 @@ jobs:
           echo "upstream_tag=$UPSTREAM" >> $GITHUB_OUTPUT
 
   # ─────────────────────────────────────────────────────────────────
-  # البيلد — كل الأدوات من داخل NDK r29 فقط
+  # البيلد — NDK r29 فقط، بدون BOLT
   # ─────────────────────────────────────────────────────────────────
   build:
     needs: check-update
@@ -60,8 +60,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      NDK_VERSION: r29
-      API_LEVEL:   35
+      NDK_VERSION:  r29
+      API_LEVEL:    35
       UPSTREAM_TAG: ${{ needs.check-update.outputs.upstream_tag }}
 
     steps:
@@ -72,7 +72,7 @@ jobs:
           ref: ${{ env.UPSTREAM_TAG }}
           fetch-depth: 0
 
-      # ── NDK r29 (latest stable, Oct 2025) ─────────────────────────
+      # ── NDK r29 ────────────────────────────────────────────────────
       - name: Download NDK r29
         run: |
           wget -q \
@@ -81,30 +81,23 @@ jobs:
           unzip -qq ndk.zip
           echo "NDK_ROOT=$PWD/android-ndk-${NDK_VERSION}" >> $GITHUB_ENV
 
-      # ── Export كل الأدوات من داخل NDK مباشرةً ──────────────────────
-      # NDK r29 يجيب: clang, clang++, lld, llvm-ar, llvm-nm,
-      #               llvm-ranlib, llvm-strip, llvm-bolt — كلها جوا bin/
+      # ── Export الأدوات من NDK ──────────────────────────────────────
       - name: Export NDK toolchain vars
         run: |
           TC="$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64"
           BIN="$TC/bin"
           TARGET="aarch64-linux-android${API_LEVEL}"
 
-          echo "NDK_TC=$TC"                     >> $GITHUB_ENV
           echo "NDK_BIN=$BIN"                   >> $GITHUB_ENV
           echo "CC=$BIN/${TARGET}-clang"         >> $GITHUB_ENV
           echo "CXX=$BIN/${TARGET}-clang++"      >> $GITHUB_ENV
-          echo "LD=$BIN/ld.lld"                  >> $GITHUB_ENV
-          echo "AR=$BIN/llvm-ar"                 >> $GITHUB_ENV
-          echo "NM=$BIN/llvm-nm"                 >> $GITHUB_ENV
-          echo "RANLIB=$BIN/llvm-ranlib"         >> $GITHUB_ENV
           echo "STRIP=$BIN/llvm-strip"           >> $GITHUB_ENV
-          echo "BOLT=$BIN/llvm-bolt"             >> $GITHUB_ENV
           echo "SYSROOT=$TC/sysroot"             >> $GITHUB_ENV
-          # نضيف bin في PATH عشان CMake يلاقي الـ tools
-          echo "$BIN" >> $GITHUB_PATH
+          echo "$BIN"                            >> $GITHUB_PATH
 
-      # ── Configure عن طريق toolchain file بتاع NDK (الطريقة الرسمية) ─
+      # ── Configure ─────────────────────────────────────────────────
+      # -fPIE / -pie مطلوبين على Android Bionic
+      # ThinLTO بيدي performance أحسن بكثير من الـ default
       - name: Configure (CMake)
         run: |
           cmake -B build \
@@ -114,29 +107,32 @@ jobs:
             -DANDROID_STL=none \
             -DARM64=1 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_FLAGS="-O3 -flto=thin" \
-            -DCMAKE_CXX_FLAGS="-O3 -flto=thin" \
-            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -flto=thin -Wl,--emit-relocs"
+            -DCMAKE_C_FLAGS="-O3 -fPIE -flto=thin" \
+            -DCMAKE_CXX_FLAGS="-O3 -fPIE -flto=thin" \
+            -DCMAKE_EXE_LINKER_FLAGS="-pie -fuse-ld=lld -flto=thin"
 
       - name: Compile
         run: cmake --build build -j$(nproc)
 
-      # ── BOLT من داخل NDK r29 (مش من Ubuntu) ───────────────────────
-      - name: BOLT optimize
-        run: |
-          "$BOLT" build/box64 \
-            --reorder-blocks=ext-tsp \
-            --reorder-functions=hfsort \
-            --split-functions \
-            --split-all-cold \
-            --split-eh \
-            --dyno-stats \
-            -o build/box64.bolt
-          mv build/box64.bolt build/box64
-
-      # ── Strip من داخل NDK ──────────────────────────────────────────
+      # ── Strip ──────────────────────────────────────────────────────
       - name: Strip binary
         run: "$STRIP -s build/box64"
+
+      # ── تأكد إن الـ binary صح قبل الرفع ───────────────────────────
+      - name: Verify ELF
+        run: |
+          file build/box64
+          "$NDK_BIN/llvm-readelf" -d build/box64 | grep -E "NEEDED|PLTREL|FLAGS"
+
+      # ── ضغط بـ xz أقصى مستوى ──────────────────────────────────────
+      # -9e = level 9 + extreme mode → أصغر حجم ممكن
+      # --threads=0 = يستخدم كل الـ cores
+      # --keep = يحتفظ بالملف الأصلي
+      - name: Compress (xz -9e)
+        run: |
+          xz -9e --threads=0 --keep build/box64
+          echo "Original : $(du -sh build/box64     | cut -f1)"
+          echo "Compressed: $(du -sh build/box64.xz  | cut -f1)"
 
       # ── Release notes ──────────────────────────────────────────────
       - name: Fetch release notes
@@ -151,20 +147,21 @@ jobs:
             echo ""
             echo "---"
             echo "### Build info"
-            echo "- ✅ **BOLT** optimized (ext-tsp, hfsort, split-cold) — from NDK r29"
-            echo "- ✅ **ThinLTO** via NDK's lld"
+            echo "- ✅ **ThinLTO** (LLVM LLD from NDK r29)"
+            echo "- ✅ **PIE** — fully compatible with Android Bionic linker"
             echo "- ✅ **Android Bionic** — NDK ${{ env.NDK_VERSION }}, API ${{ env.API_LEVEL }}"
+            echo "- 📦 Compressed with **xz -9e** — decompress with: \`xz -d box64.xz\`"
             echo "- 🔖 Upstream: \`${{ env.UPSTREAM_TAG }}\`"
             echo "__EOF__"
           } >> $GITHUB_OUTPUT
 
-      # ── Publish ───────────────────────────────────────────────────
+      # ── Publish ────────────────────────────────────────────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "${{ env.UPSTREAM_TAG }}-android"
           name:     "Box64 ${{ env.UPSTREAM_TAG }} — Android Bionic (API ${{ env.API_LEVEL }})"
           body:     "${{ steps.notes.outputs.body }}"
-          files:    build/box64
+          files:    build/box64.xz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
