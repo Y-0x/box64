@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      NDK_VERSION: r29c
+      NDK_VERSION: r29
       API_LEVEL:   35
       TARGET:      aarch64-linux-android35
       UPSTREAM_TAG: ${{ needs.check-update.outputs.upstream_tag }}
