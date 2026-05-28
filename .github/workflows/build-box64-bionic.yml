@@ -2,16 +2,16 @@ name: Build Box64 for Android (Bionic) — Auto Update
 
 on:
   schedule:
-    - cron: "0 */6 * * *"   # كل 6 ساعات يشيك على تحديثات
-  workflow_dispatch:         # تشغيل يدوي لو احتجت
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  # ─────────────────────────────────────────────────────────────────────
-  # الخطوة الأولى: شيك هل فيه تحديث في box64 الرسمي
-  # ─────────────────────────────────────────────────────────────────────
+  # ───────────────────────────────────────────────────────────────────
+  # 1. شيك على تحديثات
+  # ───────────────────────────────────────────────────────────────────
   check-update:
     runs-on: ubuntu-latest
     outputs:
@@ -19,45 +19,42 @@ jobs:
       upstream_tag:  ${{ steps.compare.outputs.upstream_tag }}
 
     steps:
-      - name: Fetch upstream latest tag
+      - name: Get upstream latest tag
         id: upstream
         run: |
           TAG=$(curl -sf https://api.github.com/repos/ptitSeb/box64/releases/latest \
                 | jq -r '.tag_name')
           echo "upstream_tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Fetch last tag we built
+      - name: Get last tag we built
         id: local
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # نجيب آخر release بنيناه في الريبو ده
           LAST=$(gh release list --repo ${{ github.repository }} \
                    --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || echo "none")
           echo "last_tag=$LAST" >> $GITHUB_OUTPUT
 
-      - name: Compare tags
+      - name: Compare
         id: compare
         run: |
           UPSTREAM="${{ steps.upstream.outputs.upstream_tag }}"
           LAST="${{ steps.local.outputs.last_tag }}"
           EXPECTED="${UPSTREAM}-android"
-
           echo "Upstream : $UPSTREAM"
           echo "Last built: $LAST"
-
           if [[ "$LAST" == "$EXPECTED" ]]; then
-            echo "✅ Already up-to-date — skipping build"
+            echo "✅ Already up-to-date"
             echo "should_build=false" >> $GITHUB_OUTPUT
           else
-            echo "🆕 New version detected — triggering build"
-            echo "should_build=true"  >> $GITHUB_OUTPUT
+            echo "🆕 New version — building"
+            echo "should_build=true" >> $GITHUB_OUTPUT
           fi
           echo "upstream_tag=$UPSTREAM" >> $GITHUB_OUTPUT
 
-  # ─────────────────────────────────────────────────────────────────────
-  # الخطوة الثانية: البيلد نفسه (بس لو فيه تحديث)
-  # ─────────────────────────────────────────────────────────────────────
+  # ───────────────────────────────────────────────────────────────────
+  # 2. البيلد
+  # ───────────────────────────────────────────────────────────────────
   build:
     needs: check-update
     if: needs.check-update.outputs.should_build == 'true'
@@ -66,61 +63,41 @@ jobs:
     env:
       NDK_VERSION: r27c
       API_LEVEL:   28
-      TARGET:      aarch64-linux-android28
       UPSTREAM_TAG: ${{ needs.check-update.outputs.upstream_tag }}
 
     steps:
-      - name: Checkout Box64 source (upstream tag)
+      - name: Checkout Box64 source
         uses: actions/checkout@v4
         with:
           repository: ptitSeb/box64
           ref: ${{ env.UPSTREAM_TAG }}
           fetch-depth: 0
 
-      # ── NDK (manual download — more reliable) ──────────────────────
-      - name: Download NDK ${{ env.NDK_VERSION }}
+      # ── NDK ─────────────────────────────────────────────────────────
+      - name: Download NDK
         run: |
           wget -q \
-            https://dl.google.com/android/repository/android-ndk-${{ env.NDK_VERSION }}-linux.zip \
+            https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip \
             -O ndk.zip
           unzip -qq ndk.zip
-          echo "NDK_ROOT=$PWD/android-ndk-${{ env.NDK_VERSION }}" >> $GITHUB_ENV
+          echo "NDK_ROOT=$PWD/android-ndk-${NDK_VERSION}" >> $GITHUB_ENV
 
-      # ── BOLT + build tools ─────────────────────────────────────────
-      - name: Install BOLT + ninja
+      # ── BOLT + ninja ─────────────────────────────────────────────────
+      - name: Install deps
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y bolt ninja-build
 
-      # ── Toolchain vars ─────────────────────────────────────────────
-      - name: Export toolchain vars
-        run: |
-          TC="$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64"
-          echo "NDK_TC=$TC"                                    >> $GITHUB_ENV
-          echo "CC=$TC/bin/${{ env.TARGET }}-clang"           >> $GITHUB_ENV
-          echo "CXX=$TC/bin/${{ env.TARGET }}-clang++"        >> $GITHUB_ENV
-          echo "AR=$TC/bin/llvm-ar"                           >> $GITHUB_ENV
-          echo "NM=$TC/bin/llvm-nm"                           >> $GITHUB_ENV
-          echo "RANLIB=$TC/bin/llvm-ranlib"                   >> $GITHUB_ENV
-          echo "STRIP=$TC/bin/llvm-strip"                     >> $GITHUB_ENV
-          echo "SYSROOT=$TC/sysroot"                          >> $GITHUB_ENV
-          echo "$TC/bin"                                      >> $GITHUB_PATH
-
-      # ── Configure: ThinLTO + emit-relocs ───────────────────────────
+      # ── Configure via NDK toolchain file ────────────────────────────
       - name: Configure (CMake)
         run: |
           cmake -B build -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK_ROOT/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-${{ env.API_LEVEL }} \
+            -DANDROID_STL=none \
             -DARM64=1 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER="$CC" \
-            -DCMAKE_CXX_COMPILER="$CXX" \
-            -DCMAKE_AR="$AR" \
-            -DCMAKE_NM="$NM" \
-            -DCMAKE_RANLIB="$RANLIB" \
-            -DCMAKE_SYSROOT="$SYSROOT" \
-            -DCMAKE_SYSTEM_NAME=Android \
-            -DCMAKE_SYSTEM_VERSION="${{ env.API_LEVEL }}" \
-            -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
             -DCMAKE_C_FLAGS="-O3 -flto=thin" \
             -DCMAKE_CXX_FLAGS="-O3 -flto=thin" \
             -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -flto=thin -Wl,--emit-relocs"
@@ -128,7 +105,7 @@ jobs:
       - name: Compile
         run: cmake --build build -j$(nproc)
 
-      # ── BOLT optimize ───────────────────────────────────────────────
+      # ── BOLT ────────────────────────────────────────────────────────
       - name: BOLT optimize
         run: |
           llvm-bolt build/box64 \
@@ -139,35 +116,35 @@ jobs:
             --split-eh \
             --dyno-stats \
             -o build/box64.bolt
-
           mv build/box64.bolt build/box64
 
-      # ── Strip ───────────────────────────────────────────────────────
+      # ── Strip ────────────────────────────────────────────────────────
       - name: Strip binary
-        run: "$STRIP -s build/box64"
+        run: |
+          STRIP="$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+          $STRIP -s build/box64
 
-      # ── Fetch release notes من upstream ────────────────────────────
-      - name: Fetch upstream release notes
+      # ── Release notes ────────────────────────────────────────────────
+      - name: Fetch release notes
         id: notes
         run: |
           RELEASE=$(curl -sf \
             https://api.github.com/repos/ptitSeb/box64/releases/tags/${{ env.UPSTREAM_TAG }})
           BODY=$(echo "$RELEASE" | jq -r '.body // "No release notes."')
-
           {
             echo "body<<__EOF__"
             echo "$BODY"
             echo ""
             echo "---"
             echo "### Build info"
-            echo "- ✅ Built with **BOLT** (ext-tsp block reorder, hfsort, split-cold)"
-            echo "- ✅ Built with **ThinLTO** (LLVM LLD)"
-            echo "- ✅ Target: **Bionic (Android)** — NDK ${{ env.NDK_VERSION }}, API ${{ env.API_LEVEL }}"
-            echo "- 🔖 Upstream tag: \`${{ env.UPSTREAM_TAG }}\`"
+            echo "- ✅ **BOLT** optimized (ext-tsp, hfsort, split-cold)"
+            echo "- ✅ **ThinLTO** (LLVM LLD)"
+            echo "- ✅ **Android Bionic** — NDK ${{ env.NDK_VERSION }}, API ${{ env.API_LEVEL }}"
+            echo "- 🔖 Upstream: \`${{ env.UPSTREAM_TAG }}\`"
             echo "__EOF__"
           } >> $GITHUB_OUTPUT
 
-      # ── Release ─────────────────────────────────────────────────────
+      # ── Publish ──────────────────────────────────────────────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -177,4 +154,3 @@ jobs:
           files:    build/box64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
