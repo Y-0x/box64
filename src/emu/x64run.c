@@ -562,10 +562,7 @@ x64emurun:
                 if(rex.w)
                     GD->sq[0] = ED->sdword[0];
                 else
-                    if(MODREG)
-                        GD->q[0] = ED->dword[0];    // not really a sign extension
-                    else
-                        GD->sdword[0] = ED->sdword[0];  // meh?
+                    GD->q[0] = ED->dword[0]; // zero upper 32 bits
             }
             break;
 
@@ -1036,6 +1033,10 @@ x64emurun:
         case 0xA4:                      /* MOVSB */
             tmp8s = ACCESS_FLAG(F_DF)?-1:+1;
             tmp64u = (rex.rep)?R_RCX:1L;
+            if(tmp64u && rex.is67 && !rex.is32bits) {
+                R_RSI = R_ESI;
+                R_RDI = R_EDI;
+            }
             while(tmp64u) {
                 #ifndef TEST_INTERPRETER
                 *(uint8_t*)R_RDI = *(uint8_t*)R_RSI;
@@ -1050,6 +1051,10 @@ x64emurun:
         case 0xA5:              /* (REP) MOVSD */
             tmp8s = ACCESS_FLAG(F_DF)?-1:+1;
             tmp64u = (rex.rep)?R_RCX:1L;
+            if(tmp64u && rex.is67 && !rex.is32bits) {
+                R_RSI = R_ESI;
+                R_RDI = R_EDI;
+            }
             if(rex.w) {
                 tmp8s *= 8;
                 while(tmp64u) {
@@ -1079,6 +1084,10 @@ x64emurun:
             switch(rex.rep) {
                 case 1:
                     if(R_RCX) {
+                        if(rex.is67 && !rex.is32bits) {
+                            R_RSI = R_ESI;
+                            R_RDI = R_EDI;
+                        }
                         while(R_RCX) {
                             --R_RCX;
                             tmp8u  = *(uint8_t*)R_RDI;
@@ -1093,6 +1102,10 @@ x64emurun:
                     break;
                 case 2:
                     if(R_RCX) {
+                        if(rex.is67 && !rex.is32bits) {
+                            R_RSI = R_ESI;
+                            R_RDI = R_EDI;
+                        }
                         while(R_RCX) {
                             --R_RCX;
                         tmp8u  = *(uint8_t*)R_RDI;
@@ -1106,6 +1119,10 @@ x64emurun:
                     }
                     break;
                 default:
+                    if(rex.is67 && !rex.is32bits) {
+                        R_RSI = R_ESI;
+                        R_RDI = R_EDI;
+                    }
                     tmp8u  = *(uint8_t*)R_RDI;
                     tmp8u2 = *(uint8_t*)R_RSI;
                     R_RDI += tmp8s;
@@ -1121,6 +1138,10 @@ x64emurun:
             switch(rex.rep) {
                 case 1:
                     if(R_RCX) {
+                        if(rex.is67 && !rex.is32bits) {
+                            R_RSI = R_ESI;
+                            R_RDI = R_EDI;
+                        }
                         if(rex.w) {
                             while(R_RCX) {
                                 --R_RCX;
@@ -1148,6 +1169,10 @@ x64emurun:
                     break;
                 case 2:
                     if(R_RCX) {
+                        if(rex.is67 && !rex.is32bits) {
+                            R_RSI = R_ESI;
+                            R_RDI = R_EDI;
+                        }
                         if(rex.w) {
                             while(R_RCX) {
                                 --R_RCX;
@@ -1174,6 +1199,10 @@ x64emurun:
                     }
                     break;
                 default:
+                    if(rex.is67 && !rex.is32bits) {
+                        R_RSI = R_ESI;
+                        R_RDI = R_EDI;
+                    }
                     if(rex.w) {
                         tmp64u  = *(uint64_t*)R_RDI;
                         tmp64u2 = *(uint64_t*)R_RSI;
@@ -1202,6 +1231,8 @@ x64emurun:
         case 0xAA:                      /* (REP) STOSB */
             tmp8s = ACCESS_FLAG(F_DF)?-1:+1;
             tmp64u = (rex.rep)?R_RCX:1L;
+            if(tmp64u && rex.is67 && !rex.is32bits)
+                R_RDI = R_EDI;
             while(tmp64u) {
                 #ifndef TEST_INTERPRETER
                 *(uint8_t*)R_RDI = R_AL;
@@ -1218,6 +1249,8 @@ x64emurun:
             else
                 tmp8s = ACCESS_FLAG(F_DF)?-4:+4;
             tmp64u = (rex.rep)?R_RCX:1L;
+            if(tmp64u && rex.is67 && !rex.is32bits)
+                R_RDI = R_EDI;
             if((rex.w))
                 while(tmp64u) {
                     #ifndef TEST_INTERPRETER
@@ -1238,6 +1271,8 @@ x64emurun:
         case 0xAC:                      /* LODSB */
             tmp8s = ACCESS_FLAG(F_DF)?-1:+1;
             tmp64u = (rex.rep)?R_RCX:1L;
+            if(tmp64u && rex.is67 && !rex.is32bits)
+                R_RSI = R_ESI;
             while(tmp64u) {
                 R_AL = *(uint8_t*)R_RSI;
                 R_RSI += tmp8s;
@@ -1252,6 +1287,8 @@ x64emurun:
             else
                 tmp8s = ACCESS_FLAG(F_DF)?-4:+4;
             tmp64u = (rex.rep)?R_RCX:1L;
+            if(tmp64u && rex.is67 && !rex.is32bits)
+                R_RSI = R_ESI;
             if((rex.w))
                 while(tmp64u) {
                     R_RAX = *(uint64_t*)R_RSI;
@@ -1272,6 +1309,8 @@ x64emurun:
             switch(rex.rep) {
                 case 1:
                     if(R_RCX) {
+                        if(rex.is67 && !rex.is32bits)
+                            R_RDI = R_EDI;
                         while(R_RCX) {
                             --R_RCX;
                             tmp8u = *(uint8_t*)R_RDI;
@@ -1284,17 +1323,22 @@ x64emurun:
                     break;
                 case 2:
                     if(R_RCX) {
+                        if(rex.is67 && !rex.is32bits)
+                            R_RDI = R_EDI;
                         while(R_RCX) {
                             --R_RCX;
                             tmp8u = *(uint8_t*)R_RDI;
-                            R_EDI += tmp8s;
+                            R_RDI += tmp8s;
                             if(R_AL!=tmp8u)
                                 break;
                         }
-                        if(R_RCX) cmp8(emu, R_AL, tmp8u);
+                        cmp8(emu, R_AL, tmp8u);
                     }
                     break;
                 default:
+                    if(rex.is67 && !rex.is32bits) {
+                        R_RDI = R_EDI;
+                    }
                     cmp8(emu, R_AL, *(uint8_t*)R_RDI);
                     R_RDI += tmp8s;
             }
@@ -1307,6 +1351,8 @@ x64emurun:
             switch(rex.rep) {
                 case 1:
                     if(R_RCX) {
+                        if(rex.is67 && !rex.is32bits)
+                            R_RDI = R_EDI;
                         if(rex.w) {
                             while(R_RCX) {
                                 --R_RCX;
@@ -1330,6 +1376,8 @@ x64emurun:
                     break;
                 case 2:
                     if(R_RCX) {
+                        if(rex.is67 && !rex.is32bits)
+                            R_RDI = R_EDI;
                         if(rex.w) {
                             while(R_RCX) {
                                 --R_RCX;
@@ -1352,6 +1400,9 @@ x64emurun:
                     }
                     break;
                 default:
+                    if(rex.is67 && !rex.is32bits) {
+                        R_RDI = R_EDI;
+                    }
                     if(rex.w)
                         cmp64(emu, R_RAX, *(uint64_t*)R_RDI);
                     else

@@ -2147,10 +2147,11 @@ int setJumpTableIfRef64(void* addr, void* jmp, void* ref)
     idx1 = (((uintptr_t)addr)>>JMPTABL_START1)&JMPTABLE_MASK1;
     idx0 = (((uintptr_t)addr)    )&JMPTABLE_MASK0;
     #ifdef JMPTABL_SHIFT4
-    return (native_lock_storeifref2(create_jmptbl(0, idx0, idx1, idx2, idx3, idx4), jmp, ref)==ref)?1:0;
+    void* ret = native_lock_storeifref2(create_jmptbl(0, idx0, idx1, idx2, idx3, idx4), jmp, ref);
     #else
-    return (native_lock_storeifref2(create_jmptbl(0, idx0, idx1, idx2, idx3), jmp, ref)==ref)?1:0;
+    void* ret = native_lock_storeifref2(create_jmptbl(0, idx0, idx1, idx2, idx3), jmp, ref);
     #endif
+    return ((ret==ref) || (ret==jmp))?1:0;
 }
 int isJumpTableDefault64(void* addr)
 {
@@ -3333,6 +3334,12 @@ EXPORT void* box_mmap(void *addr, size_t length, int prot, int flags, int fd, ss
     }
     #endif
     void* ret = InternalMmap(addr, length, prot, new_flags, fd, offset);
+    // io_uring doesn't support non-NULL address.
+    // The optimal approach is to detect whether an fd is an io_uring instance,
+    // but this is overly complex. So we simply retry the mmap call with the
+    // original address here.
+    if (ret == MAP_FAILED && old_addr == NULL && fd >= 0)
+        ret = InternalMmap(old_addr, length, prot, new_flags, fd, offset);
 #if !defined(NOALIGN)
     if((ret!=MAP_FAILED) && (flags&MAP_32BIT) &&
       (((uintptr_t)ret>0xffffffffLL) || ((box64_wine) && ((uintptr_t)ret&0xffff) && (ret!=addr)))) {

@@ -860,6 +860,7 @@
 #() LFplL
 #() LFpLi
 #() LFpLC
+#() LFpLu
 #() LFpLL
 #() LFpLp
 #() LFppi
@@ -953,7 +954,9 @@
 #() pFpLp
 #() pFppc
 #() pFppi
+#() pFppI
 #() pFppu
+#() pFppU
 #() pFppf
 #() pFppd
 #() pFppl
@@ -1628,7 +1631,9 @@
 #() pFpiiu
 #() pFpiiU
 #() pFpiip
+#() pFpiui
 #() pFpiuu
+#() pFpiuL
 #() pFpiUL
 #() pFpiLi
 #() pFpiLu
@@ -1637,6 +1642,7 @@
 #() pFpipi
 #() pFpipu
 #() pFpipd
+#() pFpipL
 #() pFpipp
 #() pFpCip
 #() pFpCuu
@@ -1675,6 +1681,7 @@
 #() pFppWp
 #() pFppui
 #() pFppuu
+#() pFppuL
 #() pFppup
 #() pFppdd
 #() pFppll
@@ -1712,6 +1719,7 @@
 #() vFEiipV
 #() vFEiipA
 #() vFEippp
+#() vFEpipp
 #() vFEpipV
 #() vFEpipA
 #() vFEpuuV
@@ -1925,6 +1933,7 @@
 #() iFEpipp
 #() iFEpipV
 #() iFEpipA
+#() iFEpupp
 #() iFEpLpp
 #() iFEpLpV
 #() iFEpLpA
@@ -2303,6 +2312,7 @@
 #() pFpiipp
 #() pFpiCCC
 #() pFpiuuu
+#() pFpiupL
 #() pFpiupp
 #() pFpiLip
 #() pFpipii
@@ -2322,6 +2332,7 @@
 #() pFpuupp
 #() pFpuLpp
 #() pFpupuu
+#() pFpupuL
 #() pFpuppu
 #() pFpuppp
 #() pFpfffi
@@ -2359,6 +2370,7 @@
 #() pFpppii
 #() pFpppip
 #() pFpppui
+#() pFpppuu
 #() pFpppup
 #() pFpppli
 #() pFpppLi
@@ -2408,6 +2420,7 @@
 #() vFilipli
 #() vFiliplu
 #() vFipiplp
+#() vFipippp
 #() vFCCCCff
 #() vFuiiiii
 #() vFuiiiip
@@ -2569,6 +2582,7 @@
 #() iFEpuipp
 #() iFEpuppp
 #() iFEpLppp
+#() iFEppipi
 #() iFEppipp
 #() iFEppupp
 #() iFEppppi
@@ -2621,6 +2635,7 @@
 #() iFpiippp
 #() iFpiIIIi
 #() iFpiCCpu
+#() iFpiuipu
 #() iFpiuuup
 #() iFpiuupp
 #() iFpiupip
@@ -2730,6 +2745,8 @@
 #() iFpppipi
 #() iFpppipu
 #() iFpppipp
+#() iFpppIIu
+#() iFpppIpp
 #() iFpppuii
 #() iFpppuip
 #() iFpppuuu
@@ -2887,6 +2904,8 @@
 #() pFpiiuuu
 #() pFpiipip
 #() pFpiippp
+#() pFpiuipp
+#() pFpiuuup
 #() pFpidddd
 #() pFpiLLLL
 #() pFpipipL
@@ -2894,10 +2913,13 @@
 #() pFpipuii
 #() pFpippip
 #() pFpipppp
+#() pFpuiipp
+#() pFpuiuuu
 #() pFpuuiip
 #() pFpuuuuu
 #() pFpuuuup
 #() pFpuuupu
+#() pFpuupuL
 #() pFpupuui
 #() pFpupuuu
 #() pFpupuup
@@ -2928,12 +2950,15 @@
 #() pFppuupp
 #() pFppuLli
 #() pFppupLi
+#() pFppupLp
 #() pFppuppp
 #() pFpplplp
 #() pFpplppp
 #() pFppLuui
 #() pFppLpuu
 #() pFpppiip
+#() pFpppupu
+#() pFpppupL
 #() pFpppupp
 #() pFpppLii
 #() pFpppLui
@@ -2941,6 +2966,7 @@
 #() pFppppiL
 #() pFpppppi
 #() pFpppppu
+#() pFpppppL
 #() pFpppppp
 #() pFpSiipi
 #() pFSpiiii
@@ -2972,6 +2998,7 @@
 #() vFiupuuup
 #() vFilipliu
 #() vFilulipi
+#() vFippippp
 #() vFCCCCfff
 #() vFuiiiiii
 #() vFuiiiiiC
@@ -3101,6 +3128,7 @@
 #() iFEpLiLpV
 #() iFEpLpiiL
 #() iFEppiipi
+#() iFEppippp
 #() iFEppupup
 #() iFEppuppp
 #() iFEppLpIu
@@ -3150,6 +3178,7 @@
 #() iFpupuupp
 #() iFpupuLpL
 #() iFpupupui
+#() iFpupupup
 #() iFpuppppp
 #() iFpllpppp
 #() iFpLiiiiL
@@ -3182,6 +3211,7 @@
 #() iFppuuppp
 #() iFppupupu
 #() iFppupupp
+#() iFppupLip
 #() iFppupppp
 #() iFppUUUUu
 #() iFppliupp
@@ -3279,6 +3309,7 @@
 #() pFduuulul
 #() pFpiiiiid
 #() pFpiiippp
+#() pFpiiLppu
 #() pFpiipipp
 #() pFpiiplui
 #() pFpiipppp
@@ -3310,8 +3341,10 @@
 #() pFppuuuuu
 #() pFppuuupu
 #() pFppuuupp
+#() pFppuuppp
 #() pFppuLLip
 #() pFppupuuu
+#() pFppupLip
 #() pFppliuip
 #() pFpplipup
 #() pFppLLiLi
@@ -3453,6 +3486,7 @@
 #() iFpiiiiiiu
 #() iFpiiupppp
 #() iFpiuiiLLL
+#() iFpiuuuppp
 #() iFpipiipip
 #() iFpippiiii
 #() iFpippuuui
@@ -3828,6 +3862,7 @@
 #() iFEpiiiiippp
 #() iFEpuppupppp
 #() iFEpupppLppL
+#() iFEppiippppp
 #() iFEppLuppupp
 #() iFEppppLpppp
 #() iFEppppppipp
@@ -3839,7 +3874,6 @@
 #() iFpiiLiiipip
 #() iFpiLLiiipip
 #() iFpiLLdduudd
-#() iFpipiipippi
 #() iFpCuWCCCCup
 #() iFpuuLiuiiLL
 #() iFpLLpiiuuii
@@ -3924,7 +3958,9 @@
 #() vFppppppppppL
 #() vFppppppppppp
 #() iFEiipppppppp
+#() iFEpipiipippi
 #() iFEpLppiiiiuu
+#() iFEppiipppppp
 #() iFEppLpLpLLpp
 #() iFEpppupppppp
 #() iFEpppppppppp
@@ -4676,6 +4712,7 @@ wrappedgio2:
   - g_task_new
 - vFpippp:
   - g_async_initable_init_async
+  - g_file_trash_async
 - vFpuipV:
   - g_dbus_method_invocation_return_error
   - g_simple_async_result_set_error
@@ -6121,6 +6158,8 @@ wrappedlibmvec:
   - _ZGVbN2v_cos
   - _ZGVbN2v_sin
   - _ZGVbN2vv_pow
+  - _ZGVbN4v_cosf
+  - _ZGVbN4v_sinf
   - _ZGVbN4vv_powf
 wrappedlibncurses:
 - pFv:
@@ -6350,18 +6389,26 @@ wrappedlibpthread:
 - iFpppp:
   - pthread_create
 wrappedlibresolv:
+- iFpp:
+  - __dn_skipname
+  - dn_skipname
 - iFpiipi:
   - __res_query
   - __res_search
   - res_query
   - res_search
+- iFppipi:
+  - __res_nsend
+  - res_nsend
 - iFppppi:
   - __dn_expand
   - dn_expand
 - iFppiipi:
   - __res_nquery
+  - __res_nsearch
   - __res_querydomain
   - res_nquery
+  - res_nsearch
   - res_querydomain
 - iFpppiipi:
   - __res_nquerydomain
@@ -6369,6 +6416,9 @@ wrappedlibresolv:
 - iFipiipippi:
   - __res_mkquery
   - res_mkquery
+- iFpipiipippi:
+  - __res_nmkquery
+  - res_nmkquery
 wrappedlibrt:
 - iFp:
   - aio_read
@@ -6402,13 +6452,28 @@ wrappedlibsqlite3:
   - sqlite3_mprintf
 - pFpA:
   - sqlite3_vmprintf
+- iFppp:
+  - sqlite3_set_authorizer
+- vFpipp:
+  - sqlite3_progress_handler
+- vFppip:
+  - sqlite3_result_blob
+  - sqlite3_result_text
+- iFpupp:
+  - sqlite3_trace_v2
 - iFpipip:
   - sqlite3_bind_blob
   - sqlite3_bind_text
 - iFppppp:
   - sqlite3_exec
+- iFppippp:
+  - sqlite3_create_collation_v2
 - iFppiipppp:
   - sqlite3_create_function
+- iFppiippppp:
+  - sqlite3_create_function_v2
+- iFppiipppppp:
+  - sqlite3_create_window_function
 wrappedlibssh2:
 - iFppup:
   - libssh2_userauth_keyboard_interactive_ex
@@ -6769,6 +6834,11 @@ wrappedpangoft2:
 - pFp:
   - pango_fc_font_lock_face
 wrappedpcap:
+wrappedpipewire03:
+- pFpV:
+  - pw_properties_new
+- iFpppV:
+  - pw_properties_setf
 wrappedpixman1:
 wrappedplc4:
 wrappedplds4:
