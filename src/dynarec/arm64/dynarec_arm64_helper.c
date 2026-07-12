@@ -517,6 +517,7 @@ void iret_to_next(dynarec_arm_t* dyn, uintptr_t ip, int ninst, int is32bits, int
     rex_t dummy = {0};
     dummy.is32bits = is32bits;
     dummy.w = is64bits;
+    TBNZ_MARK2(xFlags, F_TF);
     ret_to_next(dyn, ip, ninst, dummy);
     CLEARIP();
     MARK;
@@ -530,6 +531,11 @@ void iret_to_next(dynarec_arm_t* dyn, uintptr_t ip, int ninst, int is32bits, int
     else
         ADDx_U12(xRSP, xRSP, 4*3);
     CALL_S(const_native_priv, -1);
+    MARK2;
+    LDRw_U12(x4, xEmu, offsetof(x64emu_t, flags));
+    ORRw_mask(x4, x4, 32-FLAGS_NO_TF, 0);   //mask=1<<FLAGS_NO_TF
+    STRw_U12(x4, xEmu, offsetof(x64emu_t, flags));
+    jump_to_epilog(dyn, 0, xRIP, ninst);
 }
 
 void call_c(dynarec_arm_t* dyn, int ninst, arm64_consts_t fnc, int reg, int ret, int saveflags, int savereg)
@@ -2311,7 +2317,7 @@ static void flagsCacheTransform(dynarec_arm_t* dyn, int ninst)
     int jmp = dyn->insts[ninst].x64.jmp_insts;
     if(jmp<0)
         return;
-    if(dyn->insts[jmp].f_exit==dyn->insts[jmp].f_entry)  // flags will be fully known, nothing we can do more
+    if(dyn->insts[ninst].f_exit==dyn->insts[jmp].f_entry)  // flags will be fully known, nothing we can do more
         return;
     if(dyn->insts[jmp].df_notneeded)
         return;
@@ -2618,7 +2624,7 @@ void fpu_reset_cache(dynarec_arm_t* dyn, int ninst, int reset_n)
     dyn->ymm_zero = dyn->insts[reset_n].ymm0_out;
     #endif
     #if STEP == 0
-    if(dyn->need_dump && dyn->n.x87stack) dynarec_log(LOG_NONE, "New x87stack=%d at ResetCache in inst %d with %d\n", dyn->n.x87stack, ninst, reset_n);
+    if(dyn->need_dump && dyn->need_dump != 3 && dyn->n.x87stack) dynarec_log(LOG_NONE, "New x87stack=%d at ResetCache in inst %d with %d\n", dyn->n.x87stack, ninst, reset_n);
         #endif
     #if defined(HAVE_TRACE) && (STEP>2)
     if(dyn->need_dump && 0) //disable for now, need more work

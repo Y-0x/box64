@@ -71,15 +71,15 @@ BOX64_DYNAREC_CALLRET=1
  * 0: 不尝试构建尽可能大的代码块，适用于使用大量线程和 JIT 的程序（如 Unity）。
  * 1: 尽可能构建大的代码块。
  * 2: 构建更大的代码块，代码块重叠时不停止，但仅针对 elf 内存中的代码块。 [默认值]
- * 3: 构建更大的代码块，代码块重叠时不停止，适用于所有类型的内存，因此也对 wine 程序有用。
+ * 3: 构建更大的代码块，代码块重叠时不停止，适用于所有类型的内存，因此也对 Wine 程序有用。
 
 ### BOX64_DYNAREC_CALLRET
 
 优化 CALL/RET 指令。 在 WowBox64 中可用。
 
- * 0: 不优化 CALL/RET，使用跳转表。 [默认值]
+ * 0: 不优化 CALL/RET，使用跳转表。
  * 1: 尝试优化 CALL/RET，在可能的情况下跳过跳转表。
- * 2: 尝试优化 CALL/RET，在可能的情况下跳过跳转表，同时增加对返回到脏/已修改代码块的代码的处理。在 WowBox64 上不可用。
+ * 2: 尝试优化 CALL/RET，在可能的情况下跳过跳转表，同时增加对返回到脏/已修改代码块的代码的处理。在 WowBox64 上不可用。 [默认值]
 
 ### BOX64_DYNAREC_SEP
 
@@ -128,11 +128,13 @@ BOX64_DYNAREC_CALLRET=1
 
 ### BOX64_DYNAREC_FORWARD
 
-定义构建代码块时允许的最大前向跳转值。 在 WowBox64 中可用。
+定义构建代码块时允许的最大前向跳转值。仅接受 0、128、256、512 和 1024；其他值将回退为 128。 在 WowBox64 中可用。
 
  * 0: 无前向跳转值。当前代码块结束时，即使存在之前的前向跳转也不尝试继续前进。
  * 128: 允许代码块结束与下一个前向跳转之间最多 128 字节的间隙。 [默认值]
- * XXXX: 允许代码块结束与下一个前向跳转之间最多 XXXX 字节的间隙。
+ * 256: 允许代码块结束与下一个前向跳转之间最多 256 字节的间隙。
+ * 512: 允许代码块结束与下一个前向跳转之间最多 512 字节的间隙。
+ * 1024: 允许代码块结束与下一个前向跳转之间最多 1024 字节的间隙。
 
 ### BOX64_DYNAREC_NATIVEFLAGS
 
@@ -177,7 +179,7 @@ BOX64_DYNAREC_CALLRET=1
 
 ### BOX64_DYNACACHE
 
-启用或禁用动态重编译器缓存（DynaCache）。此选项默认为 2（读取已有缓存但不生成新的）。DynaCache 默认将文件写入 home 文件夹，生成新缓存文件时会根据 BOX64_DYNACACHE_LIMIT 控制文件夹大小。
+启用或禁用动态重编译器缓存（DynaCache）。此选项默认为 1（启用）。DynaCache 默认将文件写入 home 文件夹，生成新缓存文件时会根据 BOX64_DYNACACHE_LIMIT 控制文件夹大小。
 
  * 0: 禁用 DynaCache。
  * 1: 启用 DynaCache。 [默认值]
@@ -211,6 +213,13 @@ DynaCache 写入磁盘的最小大小（KB）。默认大小为 30KB。
 
  * XXXX: 设置将缓存写入磁盘的最小 DynaRec 代码大小（XXXX KB），小于此值将不会保存到磁盘。
  * 30: 默认值为 30 KB。 [默认值]
+
+### BOX64_SKIPCPU
+
+Skip N first CPU cores (Is apply before MAXCPU) 在 WowBox64 中可用。
+
+ * 0: Do not skip any CPU cores. [默认值]
+ * XXXX: Skip XXXX first CPU cores (usefull for big.LITTLE configurations).
 
 ### BOX64_MMAP32
 
@@ -316,7 +325,7 @@ DynaCache 写入磁盘的最小大小（KB）。默认大小为 30KB。
 检测 MonoBleedingEdge 并应用保守设置（仅 Linux）。
 
  * 0: 不检测 MonoBleedingEdge。
- * 1: 检测 MonoBleedingEdge，并在检测到时应用 BOX64_DYNAREC_BIGBLOCK=0 和 BOX64_DYNAREC_强内存模型=1。 [默认值]
+ * 1: 检测 MonoBleedingEdge，并在检测到时应用 BOX64_DYNAREC_BIGBLOCK=0 和 BOX64_DYNAREC_STRONGMEM=1。 [默认值]
 
 ### BOX64_DYNAREC_DIV0
 
@@ -380,7 +389,7 @@ DynaCache 写入磁盘的最小大小（KB）。默认大小为 30KB。
 检测 libjvm 并应用保守设置。
 
  * 0: 不执行任何操作。
- * 1: 检测 libjvm，并在检测到时应用 BOX64_DYNAREC_BIGBLOCK=0 BOX64_DYNAREC_强内存模型=1 BOX64_SSE42=0。 [默认值]
+ * 1: 检测 libjvm，并在检测到时应用 BOX64_DYNAREC_BIGBLOCK=0 BOX64_DYNAREC_STRONGMEM=1 BOX64_SSE42=0。 [默认值]
 
 ### BOX64_LIBCEF
 
@@ -428,10 +437,10 @@ DynaCache 写入磁盘的最小大小（KB）。默认大小为 30KB。
 
 预定义的环境变量集合，以兼容性或性能为导向。 在 WowBox64 中可用。
 
- * safest: 禁用所有不安全的 DynaRec 优化的配置文件。
- * safe: 比 safest 略不安全。
+ * safest: 禁用所有不安全的优化。
+ * safe: 仅启用小部分不安全的优化。
  * default: 大多数程序都能正常运行且性能适中的默认设置。 [默认值]
- * fast: 启用许多不安全的优化，但同时启用 强内存模型 模拟。
+ * fast: 启用许多不安全的优化，但同时启用强内存模型模拟。
  * fastest: 启用许多不安全的优化以获得更好的性能。
 
 ### BOX64_PYTHON3
@@ -476,10 +485,10 @@ python3 可执行文件的路径。
 
 ### BOX64_SSE_FLUSHTO0
 
-SSE Flush to 0 FLAGS的行为，同时追踪 SSE 异常FLAGS。 在 WowBox64 中可用。
+SSE Flush to 0 FLAGS的行为，同时追踪 SSE 异常 FLAGS。 在 WowBox64 中可用。
 
- * 0: 仅追踪FLAGS。 [默认值]
- * 1: 直接应用 SSE Flush to 0 FLAGS。同时在 DynaRec 中反映 SSE 异常FLAGS（如果可用）。
+ * 0: 仅追踪 FLAGS。 [默认值]
+ * 1: 直接应用 SSE Flush to 0 FLAGS。同时在 DynaRec 中反映 SSE 异常 FLAGS（如果可用）。
 
 ### BOX64_SSE42
 
@@ -514,7 +523,7 @@ SSE Flush to 0 FLAGS的行为，同时追踪 SSE 异常FLAGS。 在 WowBox64 中
 告诉 Box64 这是一个 Unity 游戏。
 
  * 0: 不执行任何操作。
- * 1: 这是 Unity 游戏，对 Windows 使用特殊的检测代码，对 Linux 应用 BOX64_DYNAREC_强内存模型=1。 [默认值]
+ * 1: 这是 Unity 游戏，对 Windows 使用特殊的检测代码，对 Linux 应用 BOX64_DYNAREC_STRONGMEM=1。 [默认值]
 
 ### BOX64_X11GLX
 
@@ -710,6 +719,7 @@ x87 80 位 long double 的行为。 在 WowBox64 中可用。
  * 0: 不转储代码块。 [默认值]
  * 1: 转储代码块。
  * 2: 转储代码块并带有颜色。
+ * 3: 仅转储 x86 指令和翻译后的本机指令。
 
 ### BOX64_DYNAREC_DUMP_RANGE
 
@@ -899,6 +909,7 @@ GDBJIT 调试支持，仅在使用 `-DGDBJIT=ON` 构建时可用，通过 gdb �
  * 1: 启用追踪输出。追踪在依赖项初始化之前开始。
  * symbolname: 仅对 `symbolname` 启用追踪输出。追踪在依赖项初始化之前开始。
  * 0xXXXXXXX-0xYYYYYYY: 对指定地址范围（左闭右开）启用追踪输出。追踪在依赖项初始化之前开始。
+ * 0xXXXXXXX:0xYYYYYYY:0xZZZZZZZ: 对指定的地址列表启用追踪输出。追踪在依赖项初始化之前开始。
 
 ### BOX64_TRACE_START
 
@@ -923,4 +934,5 @@ GDBJIT 调试支持，仅在使用 `-DGDBJIT=ON` 构建时可用，通过 gdb �
  * 1: 启用追踪输出。
  * symbolname: 仅对 `symbolname` 启用追踪输出。
  * 0xXXXXXXX-0xYYYYYYY: 对指定地址范围（左闭右开）启用追踪输出。
+ * 0xXXXXXXX:0xYYYYYYY:0xZZZZZZZ: 对指定地址列表启用追踪输出。
 
