@@ -202,6 +202,12 @@ uintptr_t dynarec64_66(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int ni
             INST_NAME("AND AX, Iw");
             SETFLAGS(X_ALL, SF_SET_PENDING, NAT_FLAGS_FUSION);
             i32 = F16;
+            if (!dyn->insts[ninst].x64.gen_flags && !(i32 & 0xF000)) {
+                ANDI(x1, xRAX, i32);
+                BSTRINSz(xRAX, x1, 15, 0);
+                if (dyn->insts[ninst].nat_flags_fusion) NAT_FLAGS_OPS(x1, xZR, x2, xZR);
+                break;
+            }
             BSTRPICK_D(x1, xRAX, 15, 0);
             MOV32w(x2, i32);
             emit_and16(dyn, ninst, x1, x2, x3, x4);
@@ -880,8 +886,15 @@ uintptr_t dynarec64_66(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int ni
                     ZEROUP(xRSI);
                     ZEROUP(xRDI);
                 }
-                LD_H(x1, xRSI, 0);
-                ST_H(x1, xRDI, 0);
+                IF_UNALIGNED(ip) {
+                    LD_BU(x1, xRSI, 0);
+                    ST_B(x1, xRDI, 0);
+                    LD_BU(x1, xRSI, 1);
+                    ST_B(x1, xRDI, 1);
+                } else {
+                    LD_H(x1, xRSI, 0);
+                    ST_H(x1, xRDI, 0);
+                }
                 ADD_D(xRSI, xRSI, x3);
                 ADD_D(xRDI, xRDI, x3);
             }
@@ -1440,6 +1453,32 @@ uintptr_t dynarec64_66(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int ni
                     CLEAR_FLAGS(x3);
                     IFX (X_CF | X_OF) {
                         SRLI_W(x3, x1, 16);
+                        SNEZ(x3, x3);
+                        IFX (X_CF) BSTRINS_D(xFlags, x3, F_CF, F_CF);
+                        IFX (X_OF) BSTRINS_D(xFlags, x3, F_OF, F_OF);
+                    }
+                    IFX (X_SF) {
+                        SRLI_D(x3, xRAX, 15);
+                        BSTRINS_D(xFlags, x3, F_SF, F_SF);
+                    }
+                    IFX (X_PF) emit_pf(dyn, ninst, xRAX, x3, x5);
+                    IFXA (X_ALL, cpuext.lbt) SPILL_EFLAGS();
+                    break;
+                case 5:
+                    INST_NAME("IMUL AX, Ew");
+                    SETFLAGS(X_ALL, SF_SET_NODF, NAT_FLAGS_NOFUSION);
+                    GETSEW(x1, 0);
+                    EXT_W_H(x2, xRAX);
+                    MUL_W(x1, x2, x1);
+                    BSTRINSz(xRAX, x1, 15, 0);
+                    SRLI_D(x3, x1, 16);
+                    BSTRINS_D(xRDX, x3, 15, 0);
+                    SET_DFNONE();
+                    CLEAR_FLAGS(x3);
+                    IFX (X_CF | X_OF) {
+                        SRAI_W(x2, x1, 15);
+                        SRAI_W(x3, x1, 31);
+                        XOR(x3, x3, x2);
                         SNEZ(x3, x3);
                         IFX (X_CF) BSTRINS_D(xFlags, x3, F_CF, F_CF);
                         IFX (X_OF) BSTRINS_D(xFlags, x3, F_OF, F_OF);
