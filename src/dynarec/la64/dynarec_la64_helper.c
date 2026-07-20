@@ -212,7 +212,14 @@ uintptr_t geted(dynarec_la64_t* dyn, uintptr_t addr, int ninst, uint8_t nextop, 
                 ADDIy(ret, scratch, i64);
                 if (!IS_GPR(ret)) SCRATCH_USAGE(1);
             } else {
-                MOV64y(scratch, i64);
+                int64_t lo12 = ((i64 & 0xFFF) ^ 0x800) - 0x800;
+                int64_t hi20 = i64 - lo12;
+                if (i12 && lo12 <= maxval && hi20 >= -0x80000000LL && hi20 <= 0x7FFFF000LL) {
+                    LU12I_W(scratch, hi20 >> 12);
+                    *fixaddress = lo12;
+                } else {
+                    MOV64y(scratch, i64);
+                }
                 SCRATCH_USAGE(1);
                 if ((nextop & 7) == 4) {
                     if (sib_reg != 4) {
@@ -547,6 +554,7 @@ void iret_to_next(dynarec_la64_t* dyn, uintptr_t ip, int ninst, int is32bits, in
 void call_c(dynarec_la64_t* dyn, int ninst, la64_consts_t fnc, int reg, int ret, int saveflags, int savereg, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6)
 {
     MAYUSE(fnc);
+    dyn->insts[ninst].host_call = 1;
     UP32_READALL();
     CHECK_DFNONE(1);
     if (savereg == 0)
@@ -618,6 +626,7 @@ void call_c(dynarec_la64_t* dyn, int ninst, la64_consts_t fnc, int reg, int ret,
 void call_n(dynarec_la64_t* dyn, int ninst, void* fnc, int w)
 {
     MAYUSE(fnc);
+    dyn->insts[ninst].host_call = 1;
     UP32_READALL();
     CHECK_DFNONE(1);
     fpu_pushcache(dyn, ninst, x3, 1);

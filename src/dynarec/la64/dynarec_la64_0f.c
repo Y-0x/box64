@@ -452,33 +452,7 @@ uintptr_t dynarec64_0F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int ni
             nextop = F8;
             GETGX(d0, 0);
             GETEXSS(v0, 0, 0);
-            CLEAR_FLAGS(x2);
-            // if isnan(d0) || isnan(v0)
-            IFX (X_ZF | X_PF | X_CF) {
-                FCMP_S(fcc0, d0, v0, cUN);
-                BCEQZ_MARK(fcc0);
-                ORI(xFlags, xFlags, (1 << F_ZF) | (1 << F_PF) | (1 << F_CF));
-                B_MARK3_nocond;
-            }
-            MARK;
-            // else if isless(d0, v0)
-            IFX (X_CF) {
-                FCMP_S(fcc1, d0, v0, cLT);
-                BCEQZ_MARK2(fcc1);
-                ORI(xFlags, xFlags, 1 << F_CF);
-                B_MARK3_nocond;
-            }
-            MARK2;
-            // else if d0 == v0
-            IFX (X_ZF) {
-                FCMP_S(fcc2, d0, v0, cEQ);
-                BCEQZ_MARK3(fcc2);
-                ORI(xFlags, xFlags, 1 << F_ZF);
-            }
-            MARK3;
-            IFX (X_ALL) {
-                SPILL_EFLAGS();
-            }
+            EMIT_COMIS_FLAGS(S, d0, v0, x2);
             break;
         case 0x31:
             INST_NAME("RDTSC");
@@ -1378,6 +1352,7 @@ uintptr_t dynarec64_0F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int ni
             }
             break;
 #define GO(GETFLAGS, NO, YES, NATNO, NATYES, F, I)                                          \
+    COMIS_JCC(I);                                                                           \
     READFLAGS_FUSION(F, x1, x2, x3, x4, x5);                                                \
     i32_ = F32S;                                                                            \
     if (rex.is32bits)                                                                       \
@@ -1385,7 +1360,7 @@ uintptr_t dynarec64_0F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int ni
     else                                                                                    \
         j64 = addr + i32_;                                                                  \
     JUMP(j64, 1);                                                                           \
-    if (!dyn->insts[ninst].nat_flags_fusion) {                                              \
+    if (!COMIS_FUSED() && !dyn->insts[ninst].nat_flags_fusion) {                            \
         if (cpuext.lbt) {                                                                   \
             X64_SETJ(x1, I);                                                                \
         } else {                                                                            \
@@ -1395,7 +1370,9 @@ uintptr_t dynarec64_0F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int ni
     if (dyn->insts[ninst].x64.jmp_insts == -1 || CHECK_CACHE()) {                           \
         /* out of the block */                                                              \
         i32 = dyn->insts[ninst].epilog - (dyn->native_size);                                \
-        if (dyn->insts[ninst].nat_flags_fusion) {                                           \
+        if (COMIS_FUSED()) {                                                                \
+            COMIS_BRANCH_NOT_TAKEN(i32);                                                    \
+        } else if (dyn->insts[ninst].nat_flags_fusion) {                                    \
             NATIVEJUMP_safe(NATNO, i32);                                                    \
         } else {                                                                            \
             if (cpuext.lbt)                                                                 \
@@ -1415,7 +1392,9 @@ uintptr_t dynarec64_0F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int ni
     } else {                                                                                \
         /* inside the block */                                                              \
         i32 = dyn->insts[dyn->insts[ninst].x64.jmp_insts].address - (dyn->native_size);     \
-        if (dyn->insts[ninst].nat_flags_fusion) {                                           \
+        if (COMIS_FUSED()) {                                                                \
+            COMIS_BRANCH_TAKEN(i32);                                                        \
+        } else if (dyn->insts[ninst].nat_flags_fusion) {                                    \
             NATIVEJUMP_safe(NATYES, i32);                                                   \
         } else {                                                                            \
             if (cpuext.lbt)                                                                 \
@@ -1488,6 +1467,7 @@ uintptr_t dynarec64_0F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int ni
             GETGDs;
             if (MODREG) {
                 ed = TO_NAT((nextop & 7) + (rex.b << 3));
+                MARKREGs(ed);
             } else {
                 SMREAD();
                 addr = geted(dyn, addr, ninst, nextop, &wback, x3, x1, &fixedaddress, rex, NULL, 1, 0);
@@ -2128,7 +2108,9 @@ uintptr_t dynarec64_0F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int ni
             nextop = F8;
             GETGDs;
             if (MODREG) {
-                MVxw(TO_NAT((nextop & 7) + (rex.b << 3)), gd);
+                ed = TO_NAT((nextop & 7) + (rex.b << 3));
+                MARKREGd(ed);
+                MVxw(ed, gd);
             } else {
                 addr = geted(dyn, addr, ninst, nextop, &ed, x2, x1, &fixedaddress, rex, NULL, 1, 0);
                 SDxw(gd, ed, fixedaddress);
@@ -2210,6 +2192,7 @@ uintptr_t dynarec64_0F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int ni
         case 0xCF:
             INST_NAME("BSWAP Reg");
             gd = TO_NAT((opcode & 7) + (rex.b << 3));
+            MARKREGsd(gd);
             REVBxw(gd, gd);
             break;
         case 0xD1:

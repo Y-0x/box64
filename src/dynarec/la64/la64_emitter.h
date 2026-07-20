@@ -698,6 +698,28 @@
         }                                          \
     } while (0)
 
+#define BCEQZ_safe(rj, imm)                        \
+    do {                                           \
+        if ((imm) > -0x70000 && (imm) < 0x70000) { \
+            BCEQZ(rj, imm);                        \
+            NOP();                                 \
+        } else {                                   \
+            BCNEZ(rj, 8);                          \
+            B((imm) - 4);                          \
+        }                                          \
+    } while (0)
+
+#define BCNEZ_safe(rj, imm)                        \
+    do {                                           \
+        if ((imm) > -0x70000 && (imm) < 0x70000) { \
+            BCNEZ(rj, imm);                        \
+            NOP();                                 \
+        } else {                                   \
+            BCEQZ(rj, 8);                          \
+            B((imm) - 4);                          \
+        }                                          \
+    } while (0)
+
 // vaddr = GR[rj] + SignExtend(imm12, GRLEN)
 // AddressComplianceCheck(vaddr)
 // paddr = AddressTranslation(vaddr)
@@ -2717,6 +2739,44 @@ LSX instruction starts with V, LASX instruction starts with XV.
         } else {            \
             PUSH1(reg);     \
         }                   \
+    } while (0)
+
+#define PUSH1mz(reg)                                              \
+    do {                                                          \
+        if ((reg) != xRSP)                                        \
+            dyn->insts[ninst].rsp_class = RSP_CLASS_PUSH;         \
+        if (dyn->insts[ninst].rsp_merge) {                        \
+            if (rex.is32bits) {                                   \
+                ST_W(reg, xRSP, dyn->insts[ninst].rsp_entry - 4); \
+            } else {                                              \
+                ST_D(reg, xRSP, dyn->insts[ninst].rsp_entry - 8); \
+            }                                                     \
+            if (dyn->insts[ninst].rsp_flush)                      \
+                ADDI_D(xRSP, xRSP, dyn->insts[ninst].rsp_flush);  \
+        } else if (rex.is32bits) {                                \
+            PUSH1_32(reg);                                        \
+        } else {                                                  \
+            PUSH1(reg);                                           \
+        }                                                         \
+    } while (0)
+
+#define POP1mz(reg)                                              \
+    do {                                                         \
+        if ((reg) != xRSP)                                       \
+            dyn->insts[ninst].rsp_class = RSP_CLASS_POP;         \
+        if (dyn->insts[ninst].rsp_merge) {                       \
+            if (rex.is32bits) {                                  \
+                LD_WU(reg, xRSP, dyn->insts[ninst].rsp_entry);   \
+            } else {                                             \
+                LD_D(reg, xRSP, dyn->insts[ninst].rsp_entry);    \
+            }                                                    \
+            if (dyn->insts[ninst].rsp_flush)                     \
+                ADDI_D(xRSP, xRSP, dyn->insts[ninst].rsp_flush); \
+        } else if (rex.is32bits) {                               \
+            POP1_32(reg);                                        \
+        } else {                                                 \
+            POP1(reg);                                           \
+        }                                                        \
     } while (0)
 
 #define VAND_Vxy(vd, vj, vk)     \

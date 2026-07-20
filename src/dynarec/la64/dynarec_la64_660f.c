@@ -329,32 +329,7 @@ uintptr_t dynarec64_660F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int 
             nextop = F8;
             GETGX(d0, 0);
             GETEXSD(v0, 0, 0);
-
-            CLEAR_FLAGS(x3);
-            // if isnan(d0) || isnan(v0)
-            IFX (X_ZF | X_PF | X_CF) {
-                FCMP_D(fcc0, d0, v0, cUN);
-                BCEQZ_MARK(fcc0);
-                ORI(xFlags, xFlags, (1 << F_ZF) | (1 << F_PF) | (1 << F_CF));
-                B_MARK3_nocond;
-            }
-            MARK;
-            // else if isless(d0, v0)
-            IFX (X_CF) {
-                FCMP_D(fcc1, d0, v0, cLT);
-                BCEQZ_MARK2(fcc1);
-                ORI(xFlags, xFlags, 1 << F_CF);
-                B_MARK3_nocond;
-            }
-            MARK2;
-            // else if d0 == v0
-            IFX (X_ZF) {
-                FCMP_D(fcc2, d0, v0, cEQ);
-                BCEQZ_MARK3(fcc2);
-                ORI(xFlags, xFlags, 1 << F_ZF);
-            }
-            MARK3;
-            SPILL_EFLAGS();
+            EMIT_COMIS_FLAGS(D, d0, v0, x3);
             break;
         case 0x38: // SSSE3 opcodes
             nextop = F8;
@@ -1134,6 +1109,7 @@ uintptr_t dynarec64_660F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int 
                     GETGX(q0, 0);
                     if (MODREG) {
                         ed = TO_NAT((nextop & 7) + (rex.b << 3));
+                        UP32_WRITE32(ed);
                         u8 = (F8) & 15;
                         VPICKVE2GR_BU(ed, q0, u8);
                     } else {
@@ -1151,6 +1127,7 @@ uintptr_t dynarec64_660F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int 
                     GETGX(q0, 0);
                     if (MODREG) {
                         ed = TO_NAT((nextop & 7) + (rex.b << 3));
+                        UP32_WRITE32(ed);
                         u8 = (F8) & 7;
                         VPICKVE2GR_HU(ed, q0, u8);
                     } else {
@@ -1173,6 +1150,7 @@ uintptr_t dynarec64_660F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int 
                     d0 = fpu_get_scratch(dyn);
                     if (MODREG) {
                         ed = TO_NAT((nextop & 7) + (rex.b << 3));
+                        MARKREGd(ed);
                         u8 = F8;
                         if (rex.w) {
                             VPICKVE2GR_D(ed, q0, (u8 & 1));
@@ -1198,6 +1176,7 @@ uintptr_t dynarec64_660F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int 
                     GETGX(q0, 0);
                     if (MODREG) {
                         ed = TO_NAT((nextop & 7) + (rex.b << 3));
+                        UP32_WRITE32(ed);
                         u8 = F8 & 0b11;
                         VPICKVE2GR_WU(ed, q0, u8);
                     } else {
@@ -2198,6 +2177,7 @@ uintptr_t dynarec64_660F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int 
             if (rex.w) {
                 if (MODREG) {
                     ed = TO_NAT((nextop & 7) + (rex.b << 3));
+                    MARKREGd(ed);
                     MOVFR2GR_D(ed, v0);
                 } else {
                     addr = geted(dyn, addr, ninst, nextop, &ed, x2, x3, &fixedaddress, rex, NULL, 1, 0);
@@ -2207,6 +2187,7 @@ uintptr_t dynarec64_660F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int 
             } else {
                 if (MODREG) {
                     ed = TO_NAT((nextop & 7) + (rex.b << 3));
+                    MARKREGd(ed);
                     MOVFR2GR_S(ed, v0);
                     if (NEED_ZEROUP(ed)) ZEROUP(ed);
                 } else {
@@ -2780,6 +2761,7 @@ uintptr_t dynarec64_660F(dynarec_la64_t* dyn, uintptr_t addr, uintptr_t ip, int 
             INST_NAME("BSWAP Reg");
             gd = TO_NAT((opcode & 7) + (rex.b << 3));
             if (rex.w) {
+                MARKREGsd(gd);
                 REVB_D(gd, gd);
             } else {
                 // undefined behaviour
